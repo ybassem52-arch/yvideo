@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منصة الأفلام والمسلسلات</title>
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
         body { font-family: 'Cairo', sans-serif; background-color: #0f172a; color: #fff; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -43,21 +41,30 @@
             </div>
 
             <h2 id="sectionTitle" class="text-xl font-bold mb-4 border-r-4 border-red-600 pr-3">الأفلام الرائجة حالياً</h2>
+            <!-- شبكة البوسترات رجعت زي ما هي -->
             <div id="mediaGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 <div class="text-center col-span-full py-10 text-slate-400">جاري التحميل...</div>
             </div>
         </div>
 
-        <!-- Watch View (Hidden by default) -->
+        <!-- Watch View -->
         <div id="watchView" class="hidden">
             <button onclick="goHome()" class="mb-4 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 w-fit">
                 <i class="fa-solid fa-arrow-right"></i> العودة للرئيسية
             </button>
             <div class="bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-800">
-                <!-- Video Iframe Player -->
+                <!-- Video Player Iframe -->
                 <div class="relative w-full aspect-video bg-black">
-                    <iframe id="videoPlayer" src="" class="w-full h-full border-0" allowfullscreen></iframe>
+                    <iframe id="videoPlayer" src="" class="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>
                 </div>
+                
+                <!-- Multi-Server Controls -->
+                <div class="p-4 bg-slate-950 border-t border-slate-800 flex flex-wrap gap-2 items-center">
+                    <span class="text-xs text-slate-400 ml-2"><i class="fa-solid fa-server"></i> سيرفرات العرض:</span>
+                    <button onclick="setEmbedServer(1)" id="srvBtn1" class="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold transition">سيرفر EmbedSu</button>
+                    <button onclick="setEmbedServer(2)" id="srvBtn2" class="bg-slate-800 text-slate-300 px-3 py-1.5 rounded text-xs font-bold transition">سيرفر VidSrc V2</button>
+                </div>
+
                 <!-- Details -->
                 <div class="p-5">
                     <h1 id="mediaTitle" class="text-2xl font-bold mb-2">العنوان</h1>
@@ -68,7 +75,6 @@
 
     </main>
 
-    <!-- Footer -->
     <footer class="bg-slate-900 border-t border-slate-800 text-center py-4 text-xs text-slate-500">
         تم التطوير بواسطة يوسف &bull; بدون إعلانات نهائياً
     </footer>
@@ -78,7 +84,9 @@
         const API_KEY = '3fd2be6f0c70a2a598f084ddfb75487c';
         const IMG_PATH = 'https://image.tmdb.org/t/p/w500';
         
-        let currentType = 'movie'; // 'movie' or 'tv'
+        let currentType = 'movie';
+        let currentId = null;
+        let currentMediaType = 'movie';
 
         const mediaGrid = document.getElementById('mediaGrid');
         const homeView = document.getElementById('homeView');
@@ -91,9 +99,9 @@
         const btnMovie = document.getElementById('btnMovie');
         const btnTv = document.getElementById('btnTv');
 
-        // جلب البيانات حسب التبويب (أفلام أو مسلسلات)
         function fetchMedia() {
-            const url = `https://api.themoviedb.org/3/trending/${currentType}/day?api_key=${API_KEY}&language=ar-AR`;
+            // شيلنا اللغة الإجبارية من الرابط الأساسي عشان البوسترات والأسعار ترجع لطبيعتها الأصلية العالمية
+            const url = `https://api.themoviedb.org/3/trending/${currentType}/day?api_key=${API_KEY}`;
             loadData(url);
         }
 
@@ -107,7 +115,6 @@
             }
         }
 
-        // عرض العناصر في الشبكة
         function showMedia(items) {
             mediaGrid.innerHTML = '';
             if (!items || items.length === 0) {
@@ -117,11 +124,10 @@
 
             items.forEach(item => {
                 const id = item.id;
-                const title = item.title || item.name; // الأفلام اسمها title والمسلسلات اسمها name
+                const title = item.original_title || item.original_name || item.title || item.name;
                 const poster_path = item.poster_path;
                 const vote_average = item.vote_average;
                 const date = item.release_date || item.first_air_date;
-                
                 const poster = poster_path ? IMG_PATH + poster_path : 'https://via.placeholder.com/500x750?text=No+Image';
                 
                 const card = document.createElement('div');
@@ -136,7 +142,7 @@
                         </span>
                     </div>
                     <div class="p-3">
-                        <h3 class="font-bold text-sm truncate mb-1">${title}</h3>
+                        <h3 class="font-bold text-sm truncate mb-1" dir="ltr">${title}</h3>
                         <p class="text-xs text-slate-400">${date ? date.split('-')[0] : ''}</p>
                     </div>
                 `;
@@ -144,7 +150,6 @@
             });
         }
 
-        // تبديل الأقسام (أفلام / مسلسلات)
         function switchTab(type) {
             currentType = type;
             if (type === 'movie') {
@@ -159,11 +164,10 @@
             fetchMedia();
         }
 
-        // البحث الشامل
         function searchMulti() {
             const query = searchInput.value.trim();
             if (query) {
-                const searchUrl = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&language=ar-AR&query=${encodeURIComponent(query)}`;
+                const searchUrl = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(query)}`;
                 loadData(searchUrl);
                 sectionTitle.innerText = `نتائج البحث عن: "${query}"`;
             } else {
@@ -171,25 +175,50 @@
             }
         }
 
-        // تشغيل الفيلم أو المسلسل
         function playItem(id, title, overview, type) {
+            currentId = id;
+            currentMediaType = type;
+
             homeView.classList.add('hidden');
             watchView.classList.remove('hidden');
 
             mediaTitle.innerText = title;
+            mediaTitle.setAttribute('dir', 'ltr');
             mediaOverview.innerText = overview || 'لا توجد قصة متوفرة حالياً.';
             
-            // رابط الـ Embed للمسلسلات غير الأفلام (المسلسلات بتبعت موسم 1 الحلقة 1 افتراضياً)
-            if (type === 'tv') {
-                videoPlayer.src = `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=1&episode=1`;
-            } else {
-                videoPlayer.src = `https://vidsrc.xyz/embed/movie?tmdb=${id}`;
-            }
-            
+            setEmbedServer(1);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // العودة للرئيسية
+        function setEmbedServer(serverNum) {
+            for(let i = 1; i <= 2; i++) {
+                const btn = document.getElementById(`srvBtn${i}`);
+                if(btn) {
+                    btn.className = (i === serverNum) 
+                        ? "bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold transition" 
+                        : "bg-slate-800 text-slate-300 px-3 py-1.5 rounded text-xs font-bold transition hover:bg-slate-700";
+                }
+            }
+
+            let embedUrl = '';
+            
+            if (currentMediaType === 'tv') {
+                if (serverNum === 1) {
+                    embedUrl = `https://embed.su/embed/tv/${currentId}/1/1`;
+                } else {
+                    embedUrl = `https://vidsrc.cc/v2/embed/tv/${currentId}/1/1`;
+                }
+            } else {
+                if (serverNum === 1) {
+                    embedUrl = `https://embed.su/embed/movie/${currentId}`;
+                } else {
+                    embedUrl = `https://vidsrc.cc/v2/embed/movie/${currentId}`;
+                }
+            }
+
+            videoPlayer.src = embedUrl;
+        }
+
         function goHome() {
             watchView.classList.add('hidden');
             homeView.classList.remove('hidden');
@@ -198,7 +227,6 @@
             fetchMedia();
         }
 
-        // التشغيل الأولي
         fetchMedia();
     </script>
 </body>
